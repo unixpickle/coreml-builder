@@ -15,6 +15,17 @@ public extension Model {
         self.description_p = description
         self.mlProgram = mlProgram
     }
+
+    init(
+        description: ModelDescription,
+        neuralNetwork: NeuralNetwork,
+        specificationVersion: Int32 = 7
+    ) {
+        self.init()
+        self.specificationVersion = specificationVersion
+        self.description_p = description
+        self.neuralNetwork = neuralNetwork
+    }
 }
 
 public extension ModelDescription {
@@ -457,5 +468,128 @@ extension MILSpec_Value: ToBinding {
 extension String: ToBinding {
     public func toBinding() -> MILSpec_Argument.Binding {
         return MILSpec_Argument.Binding(name: self)
+    }
+}
+
+public extension NeuralNetwork {
+    init(
+        layers: [NeuralNetworkLayer] = [],
+        preprocessing: [NeuralNetworkPreprocessing] = [],
+        arrayInputShapeMapping: NeuralNetworkMultiArrayShapeMapping = .rank5ArrayMapping,
+        imageInputShapeMapping: NeuralNetworkImageShapeMapping = .rank5ImageMapping,
+        updateParams: NetworkUpdateParameters? = nil
+    ) {
+        self.init()
+        self.layers = layers
+        self.preprocessing = preprocessing
+        self.arrayInputShapeMapping = arrayInputShapeMapping
+        self.imageInputShapeMapping = imageInputShapeMapping
+        if let updateParams = updateParams {
+            self.updateParams = updateParams
+        }
+    }
+}
+
+public extension NeuralNetworkLayer {
+    init(
+        convolution: ConvolutionLayerParams, 
+        name: String, 
+        input: [String], 
+        output: [String], 
+        inputTensor: [Tensor], 
+        outputTensor: [Tensor], 
+        isUpdatable: Bool
+    ) {        self.init()
+        self.convolution = convolution
+        self.name = name
+        self.input = input
+        self.output = output
+        self.inputTensor = inputTensor
+        self.outputTensor = outputTensor
+        self.isUpdatable = isUpdatable
+    }
+}
+
+public extension ConvolutionLayerParams {
+    init(
+        outputChannels: UInt64 = 0,
+        kernelChannels: UInt64 = 0,
+        nGroups: UInt64 = 1,
+        kernelSize: [UInt64] = [3, 3],
+        stride: [UInt64] = [1, 1],
+        dilationFactor: [UInt64] = [1, 1],
+        convolutionPaddingType: OneOf_ConvolutionPaddingType? = nil,
+        isDeconvolution: Bool = false,
+        hasBias: Bool = false,
+        weights: WeightParams? = nil,
+        bias: WeightParams? = nil,
+        outputShape: [UInt64] = []
+    ) {
+        self.init()
+        self.outputChannels = outputChannels
+        self.kernelChannels = kernelChannels
+        self.nGroups = nGroups
+        self.kernelSize = kernelSize
+        self.stride = stride
+        self.dilationFactor = dilationFactor
+        self.convolutionPaddingType = convolutionPaddingType ?? .valid(
+            ValidPadding(
+                paddingAmounts: BorderAmounts(
+                    borderAmounts: [
+                        BorderAmounts.EdgeSizes(startEdgeSize: 0, endEdgeSize: 0),
+                        BorderAmounts.EdgeSizes(startEdgeSize: 0, endEdgeSize: 0)
+                    ]
+                )
+            )
+        )
+        self.isDeconvolution = isDeconvolution
+        self.hasBias_p = hasBias
+        self.weights = weights ?? WeightParams()
+        self.bias = bias ?? WeightParams()
+        self.outputShape = outputShape
+    }
+}
+
+public extension BorderAmounts {
+    init(borderAmounts: [BorderAmounts.EdgeSizes]) {
+        self.init()
+        self.borderAmounts = borderAmounts
+    }
+}
+
+public extension BorderAmounts.EdgeSizes {
+    init(startEdgeSize: UInt64 = 0, endEdgeSize: UInt64 = 0) {
+        self.init()
+        self.startEdgeSize = startEdgeSize
+        self.endEdgeSize = endEdgeSize
+    }
+}
+
+public extension ValidPadding {
+    init(paddingAmounts: BorderAmounts) {
+        self.init()
+        self.paddingAmounts = paddingAmounts
+    }
+}
+
+public extension Tensor {
+    init(dimValue: [Int64]) {
+        self.init()
+        self.rank = UInt32(dimValue.count)
+        self.dimValue = dimValue
+    }
+}
+
+public extension WeightParams {
+    init(floatValue: [Float], isUpdatable: Bool = false) {
+        self.init()
+        self.floatValue = floatValue
+        self.isUpdatable = isUpdatable
+    }
+
+    init(float16Value: Data, isUpdatable: Bool = false) {
+        self.init()
+        self.float16Value = float16Value
+        self.isUpdatable = isUpdatable
     }
 }
