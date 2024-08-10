@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "CoreMLBuilder",
+    platforms: [.macOS(.v13)],
     products: [
         .library(
             name: "CoreMLProto",

@@ -107,6 +107,14 @@ public extension MILSpec_ValueType {
         self.init()
         self.dictionaryType = dictionaryType
     }
+
+    init(tensorType: MILSpec_DataType, shape: [UInt64]) {
+        self.init(tensorType: MILSpec_TensorType(
+            dataType: tensorType,
+            rank: Int64(shape.count),
+            dimensions: shape.map({ x in MILSpec_Dimension(constant: x) })
+        ))
+    }
 }
 
 public extension MILSpec_DictionaryType {
@@ -287,6 +295,28 @@ public extension MILSpec_TensorValue {
     }
 }
 
+public protocol ToSpecValue {
+    func toSpecValue() -> MILSpec_Value
+}
+
+extension String: ToSpecValue {
+    public func toSpecValue() -> MILSpec_Value {
+        return MILSpec_Value(immediateString: self)
+    }
+}
+
+extension Int32: ToSpecValue {
+    public func toSpecValue() -> MILSpec_Value {
+        return MILSpec_Value(immediateInt: self)
+    }
+}
+
+extension Int: ToSpecValue {
+    public func toSpecValue() -> MILSpec_Value {
+        return MILSpec_Value(immediateInt: Int32(self))
+    }
+}
+
 public extension MILSpec_DictionaryValue {
     init(values: [MILSpec_DictionaryValue.KeyValuePair] = []) {
         self.init()
@@ -317,6 +347,79 @@ public extension MILSpec_Operation {
         self.blocks = blocks
         self.attributes = attributes
     }
+
+    init(
+        constWithName name: String,
+        opName: String,
+        value: MILSpec_Value
+    ) {
+        self.init(
+            type: "const",
+            outputs: [
+                MILSpec_NamedValueType(name: name, type: value.type),
+            ],
+            attributes: [
+                "name": MILSpec_Value(immediateString: opName),
+                "val": value,
+            ]
+        )
+    }
+
+    init(
+        cast input: some ToBinding,
+        typeName: some ToBinding,
+        opName: String,
+        outName: String,
+        outType: MILSpec_ValueType
+    ) {
+        self.init(
+            type: "cast",
+            inputs: [
+                "dtype": MILSpec_Argument(arguments: [typeName.toBinding()]),
+                "x": MILSpec_Argument(arguments: [input.toBinding()]),
+            ],
+            outputs: [
+                MILSpec_NamedValueType(name: outName, type: outType),
+            ],
+            attributes: [
+                "name": MILSpec_Value(immediateString: opName),
+            ]
+        )
+    }
+
+    init(
+        conv x: some ToBinding,
+        bias: some ToBinding,
+        dilations: some ToBinding,
+        groups: some ToBinding,
+        pad: some ToBinding,
+        padType: some ToBinding,
+        strides: some ToBinding,
+        weight: some ToBinding,
+        outName: String,
+        outType: MILSpec_ValueType,
+        opName: String
+    ) {
+        self.init(
+            type: "conv",
+            inputs: [
+                "bias": MILSpec_Argument(arguments: [bias.toBinding()]),
+                "dilations": MILSpec_Argument(arguments: [dilations.toBinding()]),
+                "groups": MILSpec_Argument(arguments: [groups.toBinding()]),
+                "pad": MILSpec_Argument(arguments: [pad.toBinding()]),
+                "pad_type": MILSpec_Argument(arguments: [padType.toBinding()]),
+                "strides": MILSpec_Argument(arguments: [strides.toBinding()]),
+                "weight": MILSpec_Argument(arguments: [weight.toBinding()]),
+                "x": MILSpec_Argument(arguments: [x.toBinding()]),
+            ],
+            outputs: [
+                MILSpec_NamedValueType(name: outName, type: outType),
+            ],
+            attributes: [
+                "name": MILSpec_Value(immediateString: opName),
+            ]
+        )
+    }
 }
 
 public extension MILSpec_Argument {
@@ -341,11 +444,18 @@ public extension MILSpec_Argument.Binding {
     }
 }
 
-func convLayer() {
-    var model = Model()
-    model.specificationVersion = 7
-    model.description_p = ModelDescription()
-    model.description_p.input = [
-        
-    ]
+public protocol ToBinding {
+    func toBinding() -> MILSpec_Argument.Binding
+}
+
+extension MILSpec_Value: ToBinding {
+    public func toBinding() -> MILSpec_Argument.Binding {
+        return MILSpec_Argument.Binding(value: self)
+    }
+}
+
+extension String: ToBinding {
+    public func toBinding() -> MILSpec_Argument.Binding {
+        return MILSpec_Argument.Binding(name: self)
+    }
 }
