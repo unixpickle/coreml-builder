@@ -8,6 +8,7 @@ public struct Conv2D {
     public let width: Int64
     public let outChannels: Int64
     public let kernelSize: Int64
+    public let dtype: DType
 
     public var inShape: [UInt64] {
         if let batch = batch {
@@ -43,13 +44,28 @@ public struct Conv2D {
         }
     }
 
+    private var arrayDataType: ArrayFeatureType.ArrayDataType {
+        switch dtype {
+        case .float16: .float16
+        case .float32: .float32
+        }
+    }
+
+    private var milDataType: MILSpec_DataType {
+        switch dtype {
+        case .float16: .float16
+        case .float32: .float32
+        }
+    }
+
     public init(
         batch: Int64? = nil,
         channels: Int64,
         height: Int64,
         width: Int64,
         outChannels: Int64,
-        kernelSize: Int64
+        kernelSize: Int64,
+        dtype: DType = .float16
     ) {
         self.batch = batch
         self.channels = channels
@@ -57,6 +73,7 @@ public struct Conv2D {
         self.width = width
         self.outChannels = outChannels
         self.kernelSize = kernelSize
+        self.dtype = dtype
     }
 
     public func model(asNeuralNetwork: Bool) async throws -> MLModel {
@@ -85,13 +102,13 @@ public struct Conv2D {
             input: [
                 FeatureDescription(
                     name: "input",
-                    type: FeatureType(multiArray: inShape.map({Int64($0)}), dataType: .float16)
+                    type: FeatureType(multiArray: inShape.map({Int64($0)}), dataType: arrayDataType)
                 ),
             ],
             output: [
                 FeatureDescription(
                     name: "output",
-                    type: FeatureType(multiArray: outShape.map({Int64($0)}), dataType: .float16)
+                    type: FeatureType(multiArray: outShape.map({Int64($0)}), dataType: arrayDataType)
                 ),
             ]
         )
@@ -105,7 +122,7 @@ public struct Conv2D {
                     MILSpec_NamedValueType(
                         name: "input",
                         type: MILSpec_ValueType(
-                            tensorType: .float16,
+                            tensorType: milDataType,
                             shape: inShape
                         )
                     ),
@@ -119,7 +136,7 @@ public struct Conv2D {
                             opName: "declare_w",
                             value: MILSpec_Value(
                                 type: MILSpec_ValueType(
-                                    tensorType: .float16,
+                                    tensorType: milDataType,
                                     shape: [
                                         UInt64(outChannels),
                                         UInt64(channels),
@@ -128,12 +145,7 @@ public struct Conv2D {
                                     ]
                                 ),
                                 immediateValue: MILSpec_Value.ImmediateValue(
-                                    tensor: MILSpec_TensorValue(
-                                        bytes: Data([UInt8](
-                                            repeating: 0,
-                                            count: Int(2 * outChannels * channels * kernelSize * kernelSize)
-                                        ))
-                                    )
+                                    tensor: createTensorValue(size: outChannels * channels * kernelSize * kernelSize)
                                 )
                             )
                         ),
@@ -142,16 +154,11 @@ public struct Conv2D {
                             opName: "declare_b",
                             value: MILSpec_Value(
                                 type: MILSpec_ValueType(
-                                    tensorType: .float16,
+                                    tensorType: milDataType,
                                     shape: [UInt64(outChannels)]
                                 ),
                                 immediateValue: MILSpec_Value.ImmediateValue(
-                                    tensor: MILSpec_TensorValue(
-                                        bytes: Data([UInt8](
-                                            repeating: 0,
-                                            count: Int(outChannels * 2)
-                                        ))
-                                    )
+                                    tensor: createTensorValue(size: outChannels)
                                 )
                             )
                         ),
@@ -165,7 +172,7 @@ public struct Conv2D {
                             strides: MILSpec_Value(immediateInts: [1, 1]),
                             weight: "w",
                             outName: "output",
-                            outType: MILSpec_ValueType(tensorType: .float16, shape: outShape),
+                            outType: MILSpec_ValueType(tensorType: milDataType, shape: outShape),
                             opName: "apply_conv"
                         )
                     ]
@@ -177,6 +184,15 @@ public struct Conv2D {
                 "coremltools-source-dialect": "TorchScript",
             ])]
         )
+    }
+
+    private func createTensorValue(size: Int64) -> MILSpec_TensorValue {
+        switch dtype {
+        case .float16:
+            MILSpec_TensorValue(bytes: Data([UInt8](repeating: 0, count: Int(size * 2))))
+        case .float32:
+            MILSpec_TensorValue(floats: [Float](repeating: 0, count: Int(size)))
+        }
     }
 
     private func neuralNetwork() -> NeuralNetwork {
@@ -191,17 +207,8 @@ public struct Conv2D {
                         stride: [1, 1],
                         dilationFactor: [1, 1],
                         hasBias: true,
-                        weights: WeightParams(
-                            float16Value: Data([UInt8](
-                                repeating: 0,
-                                count: Int(2 * outChannels * channels * kernelSize * kernelSize)
-                            )),
-                            isUpdatable: true
-                        ),
-                        bias: WeightParams(
-                            float16Value: Data([UInt8](repeating: 0, count: Int(2 * outChannels))),
-                            isUpdatable: true
-                        ),
+                        weights: createWeightParams(size: outChannels * channels * kernelSize * kernelSize),
+                        bias: createWeightParams(size: outChannels),
                         outputShape: outShape
                     ),
                     name: "conv",
@@ -214,5 +221,20 @@ public struct Conv2D {
             ],
             updateParams: NetworkUpdateParameters()
         )
+    }
+
+    private func createWeightParams(size: Int64) -> WeightParams {
+        switch dtype {
+        case .float16:
+            WeightParams(
+                float16Value: Data([UInt8](repeating: 0, count: Int(2 * size))),
+                isUpdatable: true
+            )
+        case .float32:
+            WeightParams(
+                floatValue: [Float](repeating: 0, count: Int(size)),
+                isUpdatable: true
+            )
+        }
     }
 }
