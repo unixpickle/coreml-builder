@@ -431,6 +431,30 @@ public extension MILSpec_Operation {
             ]
         )
     }
+
+    init(
+        linear x: some ToBinding,
+        weight: some ToBinding,
+        bias: some ToBinding,
+        outName: String,
+        outType: MILSpec_ValueType,
+        opName: String
+    ) {
+        self.init(
+            type: "linear",
+            inputs: [
+                "bias": MILSpec_Argument(arguments: [bias.toBinding()]),
+                "weight": MILSpec_Argument(arguments: [weight.toBinding()]),
+                "x": MILSpec_Argument(arguments: [x.toBinding()]),
+            ],
+            outputs: [
+                MILSpec_NamedValueType(name: outName, type: outType),
+            ],
+            attributes: [
+                "name": MILSpec_Value(immediateString: opName),
+            ]
+        )
+    }
 }
 
 public extension MILSpec_Argument {
