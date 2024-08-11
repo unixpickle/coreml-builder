@@ -43,6 +43,22 @@ public struct Conv2D {
         }
     }
 
+    public init(
+        batch: Int64? = nil,
+        channels: Int64,
+        height: Int64,
+        width: Int64,
+        outChannels: Int64,
+        kernelSize: Int64
+    ) {
+        self.batch = batch
+        self.channels = channels
+        self.height = height
+        self.width = width
+        self.outChannels = outChannels
+        self.kernelSize = kernelSize
+    }
+
     public func model(asNeuralNetwork: Bool) async throws -> MLModel {
         let spec = self.spec(asNeuralNetwork: asNeuralNetwork)
         let data = try spec.serializedData()
@@ -69,7 +85,7 @@ public struct Conv2D {
             input: [
                 FeatureDescription(
                     name: "input",
-                    type: FeatureType(multiArray: inShape.map({Int64($0)}), dataType: .float32)
+                    type: FeatureType(multiArray: inShape.map({Int64($0)}), dataType: .float16)
                 ),
             ],
             output: [
@@ -89,7 +105,7 @@ public struct Conv2D {
                     MILSpec_NamedValueType(
                         name: "input",
                         type: MILSpec_ValueType(
-                            tensorType: .float32,
+                            tensorType: .float16,
                             shape: inShape
                         )
                     ),
@@ -140,17 +156,7 @@ public struct Conv2D {
                             )
                         ),
                         MILSpec_Operation(
-                            cast: "input",
-                            typeName: "fp16".toSpecValue(),
-                            opName: "cast_input",
-                            outName: "input_as_fp16",
-                            outType: MILSpec_ValueType(
-                                tensorType: .float16,
-                                shape: inShape
-                            )
-                        ),
-                        MILSpec_Operation(
-                            conv: "input_as_fp16",
+                            conv: "input",
                             bias: "b",
                             dilations: MILSpec_Value(immediateInts: [1, 1]),
                             groups: 1.toSpecValue(),
@@ -174,7 +180,7 @@ public struct Conv2D {
     }
 
     private func neuralNetwork() -> NeuralNetwork {
-        return NeuralNetwork(
+        NeuralNetwork(
             layers: [
                 NeuralNetworkLayer(
                     convolution: ConvolutionLayerParams(
@@ -198,9 +204,9 @@ public struct Conv2D {
                         ),
                         outputShape: outShape
                     ),
-                    name: "conv", 
-                    input: ["input"], 
-                    output: ["output"], 
+                    name: "conv",
+                    input: ["input"],
+                    output: ["output"],
                     inputTensor: [Tensor(dimValue: inShape.map({Int64($0)}))],
                     outputTensor: [Tensor(dimValue: outShape.map({Int64($0)}))],
                     isUpdatable: true

@@ -14,7 +14,7 @@ final class CoreMLBuilderTests: XCTestCase {
                 kernelSize: 1
             )
             let model = try await conv.model(asNeuralNetwork: asNeuralNetwork)
-            let arr = try MLMultiArray(shape: asNeuralNetwork ? [8192, 1, 512] : [1, 8192, 1, 512], dataType: .float32)
+            let arr = try MLMultiArray(shape: asNeuralNetwork ? [8192, 1, 512] : [1, 8192, 1, 512], dataType: .float16)
             let featureProvider: MLFeatureProvider = try MLDictionaryFeatureProvider(dictionary: [
                 "input": MLFeatureValue(multiArray: arr)
             ])

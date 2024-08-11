@@ -13,6 +13,9 @@ let package = Package(
         .library(
             name: "CoreMLBuilder",
             targets: ["CoreMLBuilder"]),
+        .executable(
+            name: "MatrixBench",
+            targets: ["MatrixBench"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-protobuf", "1.9.0" ..< "2.0.0"),
@@ -28,6 +31,9 @@ let package = Package(
             dependencies: ["CoreMLProto"]),
         .testTarget(
             name: "CoreMLBuilderTests",
+            dependencies: ["CoreMLBuilder"]),
+        .executableTarget(
+            name: "MatrixBench",
             dependencies: ["CoreMLBuilder"]),
     ]
 )
