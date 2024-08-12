@@ -455,6 +455,52 @@ public extension MILSpec_Operation {
             ]
         )
     }
+
+    init(
+        transpose input: some ToBinding,
+        perm: [Int32],
+        opName: String,
+        outName: String,
+        outType: MILSpec_ValueType
+    ) {
+        self.init(
+            type: "transpose",
+            inputs: [
+                "perm": MILSpec_Argument(arguments: [
+                    MILSpec_Value(immediateInts: perm).toBinding()
+                ]),
+                "x": MILSpec_Argument(arguments: [input.toBinding()]),
+            ],
+            outputs: [
+                MILSpec_NamedValueType(name: outName, type: outType),
+            ],
+            attributes: [
+                "name": MILSpec_Value(immediateString: opName),
+            ]
+        )
+    }
+
+    init(
+        transpose input: some ToBinding,
+        perm: some ToBinding,
+        opName: String,
+        outName: String,
+        outType: MILSpec_ValueType
+    ) {
+        self.init(
+            type: "transpose",
+            inputs: [
+                "perm": MILSpec_Argument(arguments: [perm.toBinding()]),
+                "x": MILSpec_Argument(arguments: [input.toBinding()]),
+            ],
+            outputs: [
+                MILSpec_NamedValueType(name: outName, type: outType),
+            ],
+            attributes: [
+                "name": MILSpec_Value(immediateString: opName),
+            ]
+        )
+    }
 }
 
 public extension MILSpec_Argument {
