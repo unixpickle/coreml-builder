@@ -10,6 +10,9 @@ public struct Conv2D {
     public let kernelSize: Int64
     public let dtype: DType
 
+    public let weight: TensorData?
+    public let bias: TensorData?
+
     public var inShape: [UInt64] {
         if let batch = batch {
             [
@@ -65,7 +68,9 @@ public struct Conv2D {
         width: Int64,
         outChannels: Int64,
         kernelSize: Int64,
-        dtype: DType = .float16
+        dtype: DType = .float16,
+        weight: TensorData? = nil,
+        bias: TensorData? = nil
     ) {
         self.batch = batch
         self.channels = channels
@@ -74,23 +79,36 @@ public struct Conv2D {
         self.outChannels = outChannels
         self.kernelSize = kernelSize
         self.dtype = dtype
+        self.weight = weight
+        self.bias = bias
+        if let weight = weight {
+            assert(dtype == weight.dtype)
+        }
+        if let bias = bias {
+            assert(dtype == bias.dtype)
+        }
     }
 
-    public func model(asNeuralNetwork: Bool) async throws -> MLModel {
+    public func model(asNeuralNetwork: Bool, computeUnits: MLComputeUnits = .all) async throws -> MLModel {
         let spec = self.spec(asNeuralNetwork: asNeuralNetwork)
         let data = try spec.serializedData()
         let asset = try MLModelAsset(specification: data)
-        return try await MLModel.load(asset: asset, configuration: MLModelConfiguration())
+        let config = MLModelConfiguration()
+        config.computeUnits = computeUnits
+        return try await MLModel.load(asset: asset, configuration: config)
     }
 
     private func spec(asNeuralNetwork: Bool) -> Model {
         if asNeuralNetwork {
-            Model(
+            assert(self.weight != nil && self.bias != nil, "must bake weights into NeuralNetwork layers")
+        }
+        if asNeuralNetwork {
+            return Model(
                 description: self.modelDescription(),
                 neuralNetwork: self.neuralNetwork()
             )
         } else {
-            Model(
+            return Model(
                 description: self.modelDescription(),
                 mlProgram: self.mlProgram()
             )
@@ -104,7 +122,23 @@ public struct Conv2D {
                     name: "input",
                     type: FeatureType(multiArray: inShape.map({Int64($0)}), dataType: arrayDataType)
                 ),
-            ],
+            ] + (weight != nil ? [] : [
+                FeatureDescription(
+                    name: "w",
+                    type: FeatureType(
+                        multiArray: [outChannels, channels, kernelSize, kernelSize],
+                        dataType: arrayDataType
+                    )
+                ),
+            ]) + (bias != nil ? [] : [
+                FeatureDescription(
+                    name: "b",
+                    type: FeatureType(
+                        multiArray: [outChannels],
+                        dataType: arrayDataType
+                    )
+                ),
+            ]),
             output: [
                 FeatureDescription(
                     name: "output",
@@ -115,7 +149,52 @@ public struct Conv2D {
     }
 
     private func mlProgram() -> MILSpec_Program {
-        MILSpec_Program(
+        let weightType = MILSpec_ValueType(
+            tensorType: milDataType,
+            shape: [
+                UInt64(outChannels),
+                UInt64(channels),
+                UInt64(kernelSize),
+                UInt64(kernelSize),
+            ]
+        )
+        let biasType = MILSpec_ValueType(
+            tensorType: milDataType,
+            shape: [UInt64(outChannels)]
+        )
+        let wOps: [MILSpec_Operation] = if let weight = weight {
+            [
+                MILSpec_Operation(
+                    constWithName: "w",
+                    opName: "declare_w",
+                    value: MILSpec_Value(
+                        type: weightType,
+                        immediateValue: MILSpec_Value.ImmediateValue(
+                            tensor: weight.tensorValue
+                        )
+                    )
+                )
+            ]
+        } else {
+            []
+        }
+        let bOps: [MILSpec_Operation] = if let bias = bias {
+            [
+                MILSpec_Operation(
+                    constWithName: "b",
+                    opName: "declare_b",
+                    value: MILSpec_Value(
+                        type: biasType,
+                        immediateValue: MILSpec_Value.ImmediateValue(
+                            tensor: bias.tensorValue
+                        )
+                    )
+                )
+            ]
+        } else {
+            []
+        }
+        return MILSpec_Program(
             version: 1,
             functions: ["main": MILSpec_Function(
                 inputs: [
@@ -126,42 +205,21 @@ public struct Conv2D {
                             shape: inShape
                         )
                     ),
-                ],
+                ] + (weight != nil ? [] : [
+                    MILSpec_NamedValueType(
+                        name: "w",
+                        type: weightType
+                    ),
+                ]) + (bias != nil ? [] : [
+                    MILSpec_NamedValueType(
+                        name: "b",
+                        type: biasType
+                    ),
+                ]),
                 opset: "CoreML6",
                 blockSpecializations: ["CoreML6" : MILSpec_Block(
                     outputs: ["output"],
-                    operations: [
-                        MILSpec_Operation(
-                            constWithName: "w",
-                            opName: "declare_w",
-                            value: MILSpec_Value(
-                                type: MILSpec_ValueType(
-                                    tensorType: milDataType,
-                                    shape: [
-                                        UInt64(outChannels),
-                                        UInt64(channels),
-                                        UInt64(kernelSize),
-                                        UInt64(kernelSize),
-                                    ]
-                                ),
-                                immediateValue: MILSpec_Value.ImmediateValue(
-                                    tensor: createTensorValue(size: outChannels * channels * kernelSize * kernelSize)
-                                )
-                            )
-                        ),
-                        MILSpec_Operation(
-                            constWithName: "b",
-                            opName: "declare_b",
-                            value: MILSpec_Value(
-                                type: MILSpec_ValueType(
-                                    tensorType: milDataType,
-                                    shape: [UInt64(outChannels)]
-                                ),
-                                immediateValue: MILSpec_Value.ImmediateValue(
-                                    tensor: createTensorValue(size: outChannels)
-                                )
-                            )
-                        ),
+                    operations: wOps + bOps + [
                         MILSpec_Operation(
                             conv: "input",
                             bias: "b",
@@ -184,15 +242,6 @@ public struct Conv2D {
                 "coremltools-source-dialect": "TorchScript",
             ])]
         )
-    }
-
-    private func createTensorValue(size: Int64) -> MILSpec_TensorValue {
-        switch dtype {
-        case .float16:
-            MILSpec_TensorValue(bytes: Data([UInt8](repeating: 0, count: Int(size * 2))))
-        case .float32:
-            MILSpec_TensorValue(floats: [Float](repeating: 0, count: Int(size)))
-        }
     }
 
     private func neuralNetwork() -> NeuralNetwork {
