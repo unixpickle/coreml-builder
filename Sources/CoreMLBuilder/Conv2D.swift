@@ -256,8 +256,8 @@ public struct Conv2D {
                         stride: [1, 1],
                         dilationFactor: [1, 1],
                         hasBias: true,
-                        weights: createWeightParams(size: outChannels * channels * kernelSize * kernelSize),
-                        bias: createWeightParams(size: outChannels),
+                        weights: weight!.weightParams,
+                        bias: bias!.weightParams,
                         outputShape: outShape
                     ),
                     name: "conv",
@@ -270,20 +270,5 @@ public struct Conv2D {
             ],
             updateParams: NetworkUpdateParameters()
         )
-    }
-
-    private func createWeightParams(size: Int64) -> WeightParams {
-        switch dtype {
-        case .float16:
-            WeightParams(
-                float16Value: Data([UInt8](repeating: 0, count: Int(2 * size))),
-                isUpdatable: true
-            )
-        case .float32:
-            WeightParams(
-                floatValue: [Float](repeating: 0, count: Int(size)),
-                isUpdatable: true
-            )
-        }
     }
 }

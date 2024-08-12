@@ -49,6 +49,21 @@ public enum TensorData {
         }
     }
 
+    public var weightParams: WeightParams {
+        switch self {
+        case .float16(let data):
+            WeightParams(
+                float16Value: data,
+                isUpdatable: true
+            )
+        case .float32(let arr):
+            WeightParams(
+                floatValue: arr,
+                isUpdatable: true
+            )
+        }
+    }
+
     public static func zeros(dtype: DType, size: Int) -> TensorData {
         switch dtype {
         case .float16:
