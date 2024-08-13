@@ -48,17 +48,11 @@ public struct Conv2D {
     }
 
     private var arrayDataType: ArrayFeatureType.ArrayDataType {
-        switch dtype {
-        case .float16: .float16
-        case .float32: .float32
-        }
+        dtype.arrayDataType
     }
 
     private var milDataType: MILSpec_DataType {
-        switch dtype {
-        case .float16: .float16
-        case .float32: .float32
-        }
+        dtype.milDataType
     }
 
     public init(

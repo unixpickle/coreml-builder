@@ -457,6 +457,32 @@ public extension MILSpec_Operation {
     }
 
     init(
+        matmul x: some ToBinding,
+        y: some ToBinding,
+        transposeX: some ToBinding,
+        transposeY: some ToBinding,
+        outName: String,
+        outType: MILSpec_ValueType,
+        opName: String
+    ) {
+        self.init(
+            type: "matmul",
+            inputs: [
+                "transpose_x": MILSpec_Argument(arguments: [transposeX.toBinding()]),
+                "transpose_y": MILSpec_Argument(arguments: [transposeY.toBinding()]),
+                "x": MILSpec_Argument(arguments: [x.toBinding()]),
+                "y": MILSpec_Argument(arguments: [y.toBinding()]),
+            ],
+            outputs: [
+                MILSpec_NamedValueType(name: outName, type: outType),
+            ],
+            attributes: [
+                "name": MILSpec_Value(immediateString: opName),
+            ]
+        )
+    }
+
+    init(
         transpose input: some ToBinding,
         perm: [Int32],
         opName: String,
@@ -538,6 +564,12 @@ extension MILSpec_Value: ToBinding {
 extension String: ToBinding {
     public func toBinding() -> MILSpec_Argument.Binding {
         return MILSpec_Argument.Binding(name: self)
+    }
+}
+
+extension Bool: ToBinding {
+    public func toBinding() -> MILSpec_Argument.Binding {
+        return MILSpec_Argument.Binding(value: MILSpec_Value(immediateBool: self))
     }
 }
 
