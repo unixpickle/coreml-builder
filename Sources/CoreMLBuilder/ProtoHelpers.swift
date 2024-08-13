@@ -59,7 +59,7 @@ public extension FeatureDescription {
 }
 
 public extension MILSpec_Program {
-    init(version: Int64, functions: [String: MILSpec_Function], attributes: [String: MILSpec_Value]) {
+    init(version: Int64, functions: [String : MILSpec_Function], attributes: [String : MILSpec_Value]) {
         self.init()
         self.version = version
         self.functions = functions
@@ -71,8 +71,8 @@ public extension MILSpec_Function {
     init(
         inputs: [MILSpec_NamedValueType] = [],
         opset: String = "",
-        blockSpecializations: [String: MILSpec_Block] = [:],
-        attributes: [String: MILSpec_Value] = [:]
+        blockSpecializations: [String : MILSpec_Block] = [:],
+        attributes: [String : MILSpec_Value] = [:]
     ) {
         self.init()
         self.inputs = inputs
@@ -87,7 +87,7 @@ public extension MILSpec_Block {
         inputs: [MILSpec_NamedValueType] = [],
         outputs: [String] = [],
         operations: [MILSpec_Operation] = [],
-        attributes: [String: MILSpec_Value] = [:]
+        attributes: [String : MILSpec_Value] = [:]
     ) {
         self.init()
         self.inputs = inputs
@@ -141,7 +141,7 @@ public extension MILSpec_TensorType {
         dataType: MILSpec_DataType = .unusedType,
         rank: Int64 = 0,
         dimensions: [MILSpec_Dimension] = [],
-        attributes: [String: MILSpec_Value] = [:]
+        attributes: [String : MILSpec_Value] = [:]
     ) {
         self.init()
         self.dataType = dataType
@@ -166,7 +166,7 @@ public extension MILSpec_Value {
         self.immediateValue = immediateValue
     }
 
-    init(immediateStringDict: [String: String]) {
+    init(immediateStringDict: [String : String]) {
         self.init()
         self.type = MILSpec_ValueType(
             dictionaryType: MILSpec_DictionaryType(
@@ -346,10 +346,10 @@ public extension MILSpec_DictionaryValue.KeyValuePair {
 public extension MILSpec_Operation {
     init(
         type: String = "",
-        inputs: [String: MILSpec_Argument] = [:],
+        inputs: [String : MILSpec_Argument] = [:],
         outputs: [MILSpec_NamedValueType] = [],
         blocks: [MILSpec_Block] = [],
-        attributes: [String: MILSpec_Value] = [:]
+        attributes: [String : MILSpec_Value] = [:]
     ) {
         self.init()
         self.type = type
@@ -683,7 +683,7 @@ public extension Tensor {
 }
 
 public extension WeightParams {
-    init(floatValue: [Float], isUpdatable: Bool = false) {
+init(floatValue: [Float], isUpdatable: Bool = false) {
         self.init()
         self.floatValue = floatValue
         self.isUpdatable = isUpdatable

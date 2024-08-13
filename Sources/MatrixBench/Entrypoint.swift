@@ -114,7 +114,8 @@ func linearMatmul() -> MatmulBackend {
             batch: size,
             inSize: size,
             outSize: size,
-            dtype: dtype
+            weight: TensorData.zeros(dtype: dtype, size: Int(size * size)),
+            bias: TensorData.zeros(dtype: dtype, size: Int(size))
         )
         let model = try await lin.model()
         let arr = try MLMultiArray(

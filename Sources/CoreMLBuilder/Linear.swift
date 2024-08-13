@@ -5,7 +5,8 @@ public struct Linear {
     public let batch: Int64
     public let inSize: Int64
     public let outSize: Int64
-    public let dtype: DType
+    public let weight: TensorData
+    public let bias: TensorData
 
     public var inShape: [UInt64] {
         [UInt64(batch), UInt64(inSize)]
@@ -16,23 +17,26 @@ public struct Linear {
     }
 
     private var arrayDataType: ArrayFeatureType.ArrayDataType {
-        dtype.arrayDataType
+        weight.dtype.arrayDataType
     }
 
     private var milDataType: MILSpec_DataType {
-        dtype.milDataType
+        weight.dtype.milDataType
     }
 
     public init(
         batch: Int64,
         inSize: Int64,
         outSize: Int64,
-        dtype: DType = .float16
+        weight: TensorData,
+        bias: TensorData
     ) {
         self.batch = batch
         self.inSize = inSize
         self.outSize = outSize
-        self.dtype = dtype
+        self.weight = weight
+        self.bias = bias
+        assert(weight.dtype == bias.dtype)
     }
 
     public func model() async throws -> MLModel {
@@ -95,7 +99,7 @@ public struct Linear {
                                     ]
                                 ),
                                 immediateValue: MILSpec_Value.ImmediateValue(
-                                    tensor: createTensorValue(size: outSize * inSize)
+                                    tensor: weight.tensorValue
                                 )
                             )
                         ),
@@ -108,7 +112,7 @@ public struct Linear {
                                     shape: [UInt64(outSize)]
                                 ),
                                 immediateValue: MILSpec_Value.ImmediateValue(
-                                    tensor: createTensorValue(size: outSize)
+                                    tensor: bias.tensorValue
                                 )
                             )
                         ),
@@ -129,14 +133,5 @@ public struct Linear {
                 "coremltools-source-dialect": "TorchScript",
             ])]
         )
-    }
-
-    private func createTensorValue(size: Int64) -> MILSpec_TensorValue {
-        switch dtype {
-        case .float16:
-            MILSpec_TensorValue(bytes: Data([UInt8](repeating: 0, count: Int(size * 2))))
-        case .float32:
-            MILSpec_TensorValue(floats: [Float](repeating: 0, count: Int(size)))
-        }
     }
 }
