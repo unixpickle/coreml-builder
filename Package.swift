@@ -16,6 +16,9 @@ let package = Package(
         .executable(
             name: "MatrixBench",
             targets: ["MatrixBench"]),
+        .executable(
+            name: "BlockANEMatmul",
+            targets: ["BlockANEMatmul"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-protobuf", "1.9.0" ..< "2.0.0"),
@@ -34,6 +37,9 @@ let package = Package(
             dependencies: ["CoreMLBuilder"]),
         .executableTarget(
             name: "MatrixBench",
+            dependencies: ["CoreMLBuilder"]),
+        .executableTarget(
+            name: "BlockANEMatmul",
             dependencies: ["CoreMLBuilder"]),
     ]
 )
