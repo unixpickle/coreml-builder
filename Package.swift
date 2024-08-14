@@ -21,6 +21,7 @@ let package = Package(
             targets: ["BlockANEMatmul"]),
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
         .package(url: "https://github.com/apple/swift-protobuf", "1.9.0" ..< "2.0.0"),
     ],
     targets: [
@@ -40,6 +41,9 @@ let package = Package(
             dependencies: ["CoreMLBuilder"]),
         .executableTarget(
             name: "BlockANEMatmul",
-            dependencies: ["CoreMLBuilder"]),
+            dependencies: [
+                "CoreMLBuilder",
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ]),
     ]
 )

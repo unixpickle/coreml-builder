@@ -46,11 +46,13 @@ public struct Matmul {
         self.dtype = dtype
     }
 
-    public func model() async throws -> MLModel {
+    public func model(computeUnits: MLComputeUnits = .all) async throws -> MLModel {
         let spec = self.spec()
         let data = try spec.serializedData()
         let asset = try MLModelAsset(specification: data)
-        return try await MLModel.load(asset: asset, configuration: MLModelConfiguration())
+        let config = MLModelConfiguration()
+        config.computeUnits = computeUnits
+        return try await MLModel.load(asset: asset, configuration: config)
     }
 
     private func spec() -> Model {
