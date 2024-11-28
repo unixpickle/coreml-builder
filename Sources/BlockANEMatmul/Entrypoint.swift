@@ -7,7 +7,7 @@
 // about 55%, which is surprisingly accurate for these results.
 
 import ArgumentParser
-import CoreML
+@preconcurrency import CoreML
 import CoreMLBuilder
 import Foundation
 
@@ -125,7 +125,7 @@ struct BlockANEMatmul: ParsableCommand {
   }
 }
 
-class Queue {
+final class Queue: @unchecked Sendable {
   private let queue: DispatchQueue
   private var free: [MLModel] = []
   private var sem: DispatchSemaphore
@@ -140,13 +140,13 @@ class Queue {
 
   func get() -> MLModel {
     sem.wait()
-    return queue.sync {
+    return DispatchQueue.main.sync {
       return free.popLast()!
     }
   }
 
   func put(_ model: MLModel) {
-    queue.sync {
+    DispatchQueue.main.sync {
       free.append(model)
     }
     sem.signal()
