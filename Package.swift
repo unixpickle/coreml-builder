@@ -22,7 +22,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
-        .package(url: "https://github.com/apple/swift-protobuf", "1.9.0" ..< "2.0.0"),
+        .package(url: "https://github.com/apple/swift-protobuf", "1.28.2" ..< "2.0.0"),
     ],
     targets: [
         .target(
